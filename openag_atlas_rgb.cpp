@@ -13,10 +13,7 @@
 
 
 void AtlasRgb::begin(void) {
-  // Assume Sensor Functions
-  _sensor_failure = false;
-  
-  // Set Serial Port
+  // Select Serial Port
   switch(_serial_port) {
     case 1:
       _port = &Serial1;
@@ -32,10 +29,10 @@ void AtlasRgb::begin(void) {
       return;
   }
 
-  // Open Serial Port
+  // Enable Serial Port
   _port->begin(9600);
   
-  // Check Sensor Functions
+  // Check For Failure
   _port->print("RESPONSE,1\r"); // enable response code
   String string = Serial3.readStringUntil(13);
   String ok_string = "*OK";

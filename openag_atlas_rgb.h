@@ -34,7 +34,7 @@ class AtlasRgb {
   void getSensors(void);
 
   // Private Variables
-  boolean _sensor_failure;
+  boolean _sensor_failure = false;
   String _illuminance_id;
   String _light_spectrum_rgb_id;
   int _serial_port;
