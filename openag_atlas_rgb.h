@@ -1,4 +1,4 @@
-/** 
+/**
  *  \file openag_atlas_rgb.h
  *  \brief Illuminance and light spectrum rgb sensor.
  */
@@ -11,34 +11,45 @@
  #include "WProgram.h"
 #endif
 
+#include <openag_peripheral.h>
 
 /**
  * \brief Illuminance, light spectrum rgb sensor.
  */
-class AtlasRgb {
- public:
-  // Public Functions
-  AtlasRgb(String illuminance_id, String light_spectrum_rgb_id, int serial_port);
-  void begin(void);
-  String get(String id);
-  String set (String id, String value);
+class AtlasRgb : public Peripheral {
+  public:
+    // Public variables
+    String id;
+    int illuminance;
+    int red;
+    int green;
+    int blue;
 
-  // Public Variables
-  int illuminance;
-  int red;
-  int green;
-  int blue;
-  
- private:
-  // Private Functions
-  void getSensors(void);
+    // Public functions
+    AtlasRgb(String id, String* parameters);
+    ~AtlasRgb();
+    void begin();
+    String get(String key);
+    String set (String key, String value);
 
-  // Private Variables
-  boolean _sensor_failure = false;
-  String _illuminance_id;
-  String _light_spectrum_rgb_id;
-  int _serial_port;
-  HardwareSerial *_port;
+  private:
+    // Private variables
+    String _illuminance_message;
+    String _light_spectrum_rgb_message;
+    uint32_t _time_of_last_reading;
+    String _illuminance_key;
+    String _light_spectrum_rgb_key;
+    const static uint32_t _min_update_interval = 2000;
+    int _serial_port;
+    HardwareSerial *_port;
+
+
+    // Private functions
+    void getData();
+    String getIlluminance();
+    String getLightSpectrumRgb();
+    String getMessage(String key, String value);
+    String getErrorMessage(String key);
 };
 
 #endif
