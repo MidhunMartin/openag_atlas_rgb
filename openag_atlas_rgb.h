@@ -12,44 +12,39 @@
 #endif
 
 #include <openag_peripheral.h>
+#include <std_msgs/UInt16.h>
+#include <std_msgs/UInt8MultiArray.h>
 
 /**
  * \brief Illuminance, light spectrum rgb sensor.
  */
-class AtlasRgb : public Peripheral {
+class AtlasRgb {
   public:
+    // Constructor
+    AtlasRgb(int serial_port);
+
     // Public variables
-    String id;
-    int illuminance;
-    int red;
-    int green;
-    int blue;
+    bool has_error;
+    char* error_msg;
 
     // Public functions
-    AtlasRgb(String id, String* parameters);
-    ~AtlasRgb();
     void begin();
-    String get(String key);
-    String set (String key, String value);
+    bool get_light_illuminance(std_msgs::UInt16 &msg);
+    bool get_light_spectrum(std_msgs::UInt8MultiArray &msg);
 
   private:
     // Private variables
-    String _illuminance_message;
-    String _light_spectrum_rgb_message;
+    uint16_t _light_illuminance;
+    uint8_t _light_spectrum[3];
     uint32_t _time_of_last_reading;
-    String _illuminance_key;
-    String _light_spectrum_rgb_key;
+    bool _send_light_illuminance;
+    bool _send_light_spectrum;
     const static uint32_t _min_update_interval = 2000;
-    int _serial_port;
-    HardwareSerial *_port;
-
+    HardwareSerial* _serial_port;
 
     // Private functions
-    void getData();
-    String getIlluminance();
-    String getLightSpectrumRgb();
-    String getMessage(String key, String value);
-    String getErrorMessage(String key);
+    void update();
+    void readData();
 };
 
 #endif

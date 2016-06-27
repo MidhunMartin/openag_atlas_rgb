@@ -5,46 +5,39 @@
 
  #include "openag_atlas_rgb.h"
 
- AtlasRgb::AtlasRgb(String id, String* parameters) : Peripheral(id, parameters) {
-   this->id = id;
-  _serial_port = parameters[0].toInt();
-  _illuminance_key = "illuminance";
-  _light_spectrum_rgb_key = "light_spectrum_rgb";
+AtlasRgb::AtlasRgb(int serial_port) {
+  switch(serial_port) {
+    case 1:
+      _serial_port = &Serial1;
+      break;
+    case 2:
+      _serial_port = &Serial2;
+      break;
+    case 3:
+      _serial_port = &Serial3;
+      break;
+  }
 }
-
-AtlasRgb::~AtlasRgb() {}
 
 void AtlasRgb::begin(void) {
   _time_of_last_reading = 0;
-  // Select serial port
-  switch(_serial_port) {
-    case 1:
-      _port = &Serial1;
-      break;
-    case 2:
-      _port = &Serial2;
-      break;
-    case 3:
-      _port = &Serial3;
-      break;
-  }
 
   // Enable serial port
-  _port->begin(9600);
+  _serial_port->begin(9600);
 
   // Set operation modes
-  _port->print("RESPONSE,0\r"); // disable response code
-  _port->print("C,0\r"); // disable streaming
-  _port->print("O,RGB,1\r"); // enable rgb readings
-  _port->print("O,PROX,0\r"); // disable proximity readings
-  _port->print("O,LUX,1\r"); // enable lux readings
-  _port->print("O,CIE,0\r"); // disable cie readings
-  _port->print("RESPONSE,1\r"); // enable response code
-  _port->readStringUntil(13);
+  _serial_port->print("RESPONSE,0\r"); // disable response code
+  _serial_port->print("C,0\r"); // disable streaming
+  _serial_port->print("O,RGB,1\r"); // enable rgb readings
+  _serial_port->print("O,PROX,0\r"); // disable proximity readings
+  _serial_port->print("O,LUX,1\r"); // enable lux readings
+  _serial_port->print("O,CIE,0\r"); // disable cie readings
+  _serial_port->print("RESPONSE,1\r"); // enable response code
+  _serial_port->readStringUntil(13);
 }
 
   // Check For Failure
-  // _port->print("RESPONSE,1\r"); // enable response code
+  // _serial_port->print("RESPONSE,1\r"); // enable response code
   // String string = Serial3.readStringUntil(13);
   // String ok_string = "*OK";
   // if (!string.equals(ok_string)) { // check sensor responds *OK
@@ -55,89 +48,90 @@ void AtlasRgb::begin(void) {
 
   // String(id + ":" + String(red) + "," + String(green) + "," + String(blue));
 
-String AtlasRgb::get(String key) {
-  if (key == _illuminance_key) {
-    return getIlluminance();
-  }
-  else if (key == _light_spectrum_rgb_key) {
-    return getLightSpectrumRgb();
-  }
-  return getErrorMessage(key);
+bool AtlasRgb::get_light_illuminance(std_msgs::UInt16 &msg) {
+  update();
+  msg.data = _light_illuminance;
+  bool res = _send_light_illuminance;
+  _send_light_illuminance = false;
+  return res;
 }
 
-String AtlasRgb::set(String key, String value) {
-  return getErrorMessage(key);
+bool AtlasRgb::get_light_spectrum(std_msgs::UInt8MultiArray &msg) {
+  update();
+  msg.data_length = 3;
+  msg.data = _light_spectrum;
+  bool res = _send_light_spectrum;
+  _send_light_spectrum = false;
+  return res;
 }
 
-String AtlasRgb::getIlluminance() {
-  if (millis() - _time_of_last_reading > _min_update_interval){ // can only read sensor so often
-    getData();
+void AtlasRgb::update() {
+  if (millis() - _time_of_last_reading > _min_update_interval) {
+    readData();
     _time_of_last_reading = millis();
   }
-  return _illuminance_message;
 }
 
-String AtlasRgb::getLightSpectrumRgb() {
-  if (millis() - _time_of_last_reading > _min_update_interval){ // can only read sensor so often
-    getData();
-    _time_of_last_reading = millis();
-  }
-  return _light_spectrum_rgb_message;
-}
-
-void AtlasRgb::getData() {
-  boolean is_good_reading = true;
-
+void AtlasRgb::readData() {
   // Read sensor
-  _port->print("R\r");
-  String response = _port->readStringUntil(13);
-  String data_string = _port->readStringUntil(13);
+  _serial_port->print("R\r");
+  String response = _serial_port->readStringUntil(13);
+  String data_string = _serial_port->readStringUntil(13);
 
   // Check for failure
   String ok_string = "*OK";
   if (!response.equals(ok_string)) {
-    is_good_reading = false;
+    error_msg = "Failed to read data";
+    has_error = true;
   }
   else {
+    _send_light_illuminance = true;
+    _send_light_spectrum = true;
+
+    // RGB values over 255 indicate that recalibration is required. We can't
+    // detect these using 8-bit integers, so we use a 16-bit integer buffer
+    // when parsing the response string.
+    uint16_t buff;
+
     // Process red value
     int start_index = 0;
     int end_index = data_string.indexOf(',');
-    red = data_string.substring(start_index, end_index).toInt();
+    buff = data_string.substring(start_index, end_index).toInt();
+    _light_spectrum[0] = buff;
+    if (buff != _light_spectrum[0]) {
+      _send_light_spectrum = false;
+      has_error = true;
+      error_msg = "Invalid response. Recalibration required.";
+    }
 
     // Process green value
     start_index = end_index + 1;
     end_index = data_string.indexOf(',', start_index);
-    green = data_string.substring(start_index, end_index).toInt();
+    buff = data_string.substring(start_index, end_index).toInt();
+    _light_spectrum[1] = buff;
+    if (buff != _light_spectrum[1]) {
+      _send_light_spectrum = false;
+      has_error = true;
+      error_msg = "Invalid response. Recalibration required.";
+    }
 
     // Process blue value
     start_index = end_index + 1;
     end_index = data_string.indexOf(',', start_index);
-    blue = data_string.substring(start_index, end_index).toInt();
+    buff = data_string.substring(start_index, end_index).toInt();
+    _light_spectrum[2] = buff;
+    if (buff != _light_spectrum[2]) {
+      _send_light_spectrum = false;
+      has_error = true;
+      error_msg = "Invalid response. Recalibration required.";
+    }
 
     // Process illuminance value
     start_index = end_index + 1; // skip over "Lux"
     end_index = data_string.indexOf(',', start_index);
     start_index = end_index + 1;
     end_index = data_string.indexOf(',', start_index);
-    illuminance = data_string.substring(start_index, end_index).toInt();
+    _light_illuminance = data_string.substring(start_index, end_index).toInt();
+    Serial.println(data_string);
   }
-
-  // Update messages
-  if (is_good_reading) {
-    _illuminance_message = getMessage(_illuminance_key, String(illuminance));
-    String value = "(" + String(red) + "," + String(green) + "," + String(blue) + ")";
-    _light_spectrum_rgb_message = getMessage(_light_spectrum_rgb_key, value);
-  }
-  else { // read failure
-    _illuminance_message = getErrorMessage(_illuminance_key);
-    _light_spectrum_rgb_message = getErrorMessage(_light_spectrum_rgb_key);
-  }
-}
-
-String AtlasRgb::getMessage(String key, String value) {
-  return String(id + "," + key + "," + value);
-}
-
-String AtlasRgb::getErrorMessage(String key) {
-  return String(id + "," + key + ",error");
 }
