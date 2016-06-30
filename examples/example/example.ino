@@ -11,6 +11,8 @@ std_msgs::UInt16 light_illuminance_msg;
 std_msgs::UInt8MultiArray light_spectrum_msg;
 
 void loop() {
+  atlas_rgb_1.update();
+
   if (atlas_rgb_1.get_light_illuminance(light_illuminance_msg)) {
     Serial.print("Light Illuminance: ");
     Serial.println(light_illuminance_msg.data);

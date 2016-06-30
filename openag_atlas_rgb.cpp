@@ -6,6 +6,10 @@
  #include "openag_atlas_rgb.h"
 
 AtlasRgb::AtlasRgb(int serial_port) {
+  has_error = false;
+  _send_light_illuminance = false;
+  _send_light_spectrum = false;
+  _time_of_last_reading = 0;
   switch(serial_port) {
     case 1:
       _serial_port = &Serial1;
@@ -20,8 +24,6 @@ AtlasRgb::AtlasRgb(int serial_port) {
 }
 
 void AtlasRgb::begin(void) {
-  _time_of_last_reading = 0;
-
   // Enable serial port
   _serial_port->begin(9600);
 
@@ -48,8 +50,14 @@ void AtlasRgb::begin(void) {
 
   // String(id + ":" + String(red) + "," + String(green) + "," + String(blue));
 
+void AtlasRgb::update() {
+  if (millis() - _time_of_last_reading > _min_update_interval) {
+    readData();
+    _time_of_last_reading = millis();
+  }
+}
+
 bool AtlasRgb::get_light_illuminance(std_msgs::UInt16 &msg) {
-  update();
   msg.data = _light_illuminance;
   bool res = _send_light_illuminance;
   _send_light_illuminance = false;
@@ -57,19 +65,11 @@ bool AtlasRgb::get_light_illuminance(std_msgs::UInt16 &msg) {
 }
 
 bool AtlasRgb::get_light_spectrum(std_msgs::UInt8MultiArray &msg) {
-  update();
   msg.data_length = 3;
   msg.data = _light_spectrum;
   bool res = _send_light_spectrum;
   _send_light_spectrum = false;
   return res;
-}
-
-void AtlasRgb::update() {
-  if (millis() - _time_of_last_reading > _min_update_interval) {
-    readData();
-    _time_of_last_reading = millis();
-  }
 }
 
 void AtlasRgb::readData() {
@@ -132,6 +132,5 @@ void AtlasRgb::readData() {
     start_index = end_index + 1;
     end_index = data_string.indexOf(',', start_index);
     _light_illuminance = data_string.substring(start_index, end_index).toInt();
-    Serial.println(data_string);
   }
 }

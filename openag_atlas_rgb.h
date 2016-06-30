@@ -29,6 +29,7 @@ class AtlasRgb {
 
     // Public functions
     void begin();
+    void update();
     bool get_light_illuminance(std_msgs::UInt16 &msg);
     bool get_light_spectrum(std_msgs::UInt8MultiArray &msg);
 
@@ -36,14 +37,13 @@ class AtlasRgb {
     // Private variables
     uint16_t _light_illuminance;
     uint8_t _light_spectrum[3];
-    uint32_t _time_of_last_reading;
     bool _send_light_illuminance;
     bool _send_light_spectrum;
+    uint32_t _time_of_last_reading;
     const static uint32_t _min_update_interval = 2000;
     HardwareSerial* _serial_port;
 
     // Private functions
-    void update();
     void readData();
 };
 
