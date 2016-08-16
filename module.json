@@ -1,0 +1,18 @@
+{
+    "class_name": "AtlasRgb",
+    "header_file": "openag_atlas_rgb.h",
+    "arguments": [
+        {
+            "name": "serial_port",
+            "type": "int"
+        }
+    ],
+    "outputs": {
+        "light_illuminance": {
+            "type": "std_msgs/UInt16"
+        },
+        "light_spectrum": {
+            "type": "std_msgs/UInt8MultiArray"
+        }
+    }
+}

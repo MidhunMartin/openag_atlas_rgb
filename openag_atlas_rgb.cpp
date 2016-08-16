@@ -6,7 +6,8 @@
  #include "openag_atlas_rgb.h"
 
 AtlasRgb::AtlasRgb(int serial_port) {
-  has_error = false;
+  status_level = OK;
+  status_msg = "";
   _send_light_illuminance = false;
   _send_light_spectrum = false;
   _time_of_last_reading = 0;
@@ -81,8 +82,8 @@ void AtlasRgb::readData() {
   // Check for failure
   String ok_string = "*OK";
   if (!response.equals(ok_string)) {
-    error_msg = "Failed to read data";
-    has_error = true;
+    status_level = ERROR;
+    status_msg = "Failed to read data";
   }
   else {
     _send_light_illuminance = true;
@@ -100,8 +101,8 @@ void AtlasRgb::readData() {
     _light_spectrum[0] = buff;
     if (buff != _light_spectrum[0]) {
       _send_light_spectrum = false;
-      has_error = true;
-      error_msg = "Invalid response. Recalibration required.";
+      status_level = ERROR;
+      status_msg = "Invalid response. Recalibration required.";
     }
 
     // Process green value
@@ -111,8 +112,8 @@ void AtlasRgb::readData() {
     _light_spectrum[1] = buff;
     if (buff != _light_spectrum[1]) {
       _send_light_spectrum = false;
-      has_error = true;
-      error_msg = "Invalid response. Recalibration required.";
+      status_level = ERROR;
+      status_msg = "Invalid response. Recalibration required.";
     }
 
     // Process blue value
@@ -122,8 +123,8 @@ void AtlasRgb::readData() {
     _light_spectrum[2] = buff;
     if (buff != _light_spectrum[2]) {
       _send_light_spectrum = false;
-      has_error = true;
-      error_msg = "Invalid response. Recalibration required.";
+      status_level = ERROR;
+      status_msg = "Invalid response. Recalibration required.";
     }
 
     // Process illuminance value

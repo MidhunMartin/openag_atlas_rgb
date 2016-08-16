@@ -11,21 +11,17 @@
  #include "WProgram.h"
 #endif
 
-#include <openag_peripheral.h>
+#include <openag_module.h>
 #include <std_msgs/UInt16.h>
 #include <std_msgs/UInt8MultiArray.h>
 
 /**
  * \brief Illuminance, light spectrum rgb sensor.
  */
-class AtlasRgb {
+class AtlasRgb : public Module {
   public:
     // Constructor
     AtlasRgb(int serial_port);
-
-    // Public variables
-    bool has_error;
-    char* error_msg;
 
     // Public functions
     void begin();
